@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <title>Babylon.js sample code</title>
+
+        <!-- Babylon.js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+        <script src="https://preview.babylonjs.com/ammo.js"></script>
+        <script src="https://preview.babylonjs.com/cannon.js"></script>
+        <script src="https://preview.babylonjs.com/Oimo.js"></script>
+        <script src="https://preview.babylonjs.com/earcut.min.js"></script>
+        <script src="https://preview.babylonjs.com/babylon.js"></script>
+        <script src="https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+        <script src="https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+        <script src="https://preview.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+        <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+        <script src="https://preview.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+        <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+        <script src="https://preview.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+
+    <style>
+        html,
+        body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+
+        var canvas = document.getElementById("renderCanvas");
+
+        var engine = null;
+        var scene = null;
+        var sceneToRender = null;
+        var createDefaultEngine = function () { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, disableWebGL2Support: false }); };
+
+        var createScene = function () {
+            engine.enableOfflineSupport = false;
+
+            // Scene and Camera
+            var scene = new BABYLON.Scene(engine);
+
+            //setup camera
+            var camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, new BABYLON.Vector3(0, -20, 20), scene);
+            camera.setPosition(new BABYLON.Vector3(20, 20, -60));
+            camera.attachControl(canvas, true);
+
+            //enable Physics in the scene
+            scene.enablePhysics(new BABYLON.Vector3(0,-12,0), new BABYLON.AmmoJSPlugin());
+
+            //setup lights
+            var light1 = new BABYLON.PointLight("light1", new BABYLON.Vector3(10, 35,-16), scene);
+            var light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(16, 15, 13.5), scene);
+            var light3 = new BABYLON.DirectionalLight("light3", new BABYLON.Vector3(20, -5, 20), scene);
+            light1.intensity = 1;
+            light2.intensity = 1;
+            
+            // GUI
+            var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+            var instructions = new BABYLON.GUI.TextBlock();
+            instructions.text = "Gal Bronstein 160870 | Gabriel Azevedo 180611";
+            instructions.color = "white";
+            instructions.fontSize = 24;
+            instructions.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT
+            instructions.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM
+            advancedTexture.addControl(instructions);
+
+            //create a box used to trigger the destrucion of marbles
+            var killBox = BABYLON.MeshBuilder.CreateBox("killBox", {width:100, depth:100, height:0.5}, scene);
+            killBox.position = new BABYLON.Vector3(0,-50,0);
+            killBox.sound = new BABYLON.Sound("victory", "./sounds/falling.wav", scene);
+            killBox.visibility = 0;
+            
+            var sphere1 = BABYLON.Mesh.CreateSphere("sphere1", 8, 0.9, scene);
+            sphere1.position.y = 18;
+            sphere1.position.x = 7;
+            sphere1.material = new BABYLON.StandardMaterial("bola1", scene);
+            sphere1.material.diffuseTexture = new BABYLON.Texture("textures/bola.jpg", scene);
+            sphere1.physicsImpostor = new BABYLON.PhysicsImpostor(sphere1, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 3, restitution: 0.1 }, scene);
+            
+            var sphere2 = BABYLON.Mesh.CreateSphere("sphere2", 8, 0.9, scene);
+            sphere2.position.x = -21;
+            sphere2.position.y = -12;
+            sphere2.position.z = -8.6;
+            sphere2.material = new BABYLON.StandardMaterial("bola2", scene);
+            sphere2.material.diffuseTexture = new BABYLON.Texture("textures/bola.jpg", scene);
+            sphere2.sound = new BABYLON.Sound("colide", "./sounds/billiard.mp3", scene);
+            sphere2.physicsImpostor = new BABYLON.PhysicsImpostor(sphere2, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 5, restitution: 0.6 }, scene);
+            
+            var sphere3 = BABYLON.Mesh.CreateSphere("sphere3", 8, 0.9, scene);
+            sphere3.position.x = 0;
+            sphere3.position.y = -33;
+            sphere3.position.z = -0.05;
+            sphere3.material = new BABYLON.StandardMaterial("bola3", scene);
+            sphere3.material.diffuseTexture = new BABYLON.Texture("textures/bola.jpg", scene);
+            sphere3.physicsImpostor = new BABYLON.PhysicsImpostor(sphere3, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 1, restitution: 0.3 }, scene);
+            
+            var can1 = createCan();
+            can1.rotation.z = Math.PI/8;
+            can1.position.y = 10;
+            can1.position.x = 4;
+            
+            var can2 = createCan();
+            can2.rotation.z = -Math.PI/8;
+            can2.position.y = 6;
+            can2.position.x = -4;
+
+            var can3 = createCan();
+            can3.rotation.z = Math.PI/8;
+            can3.position.y = 2;
+            can3.position.x = 4;
+
+            const myPath = [
+                new BABYLON.Vector3(5.0, 0, 0.0),
+                new BABYLON.Vector3(0, 1, 0.1),
+                new BABYLON.Vector3(-4.0, 6, 0.2)
+            ];
+            
+            var tubeMat = new BABYLON.StandardMaterial("tubeMat", scene);
+            tubeMat.diffuseColor.copyFromFloats(0.2, 0.2, 0.8);
+            tubeMat.backFaceCulling = false;
+            
+            var tube1 = BABYLON.MeshBuilder.CreateTube("tube1", {path: myPath, radius: 0.8, sideOrientation: BABYLON.Mesh.DOUBLESIDE}, scene);
+            tube1.rotation.z = Math.PI/3.5;
+            tube1.position.x = -4.5;
+            tube1.position.y = -3.5;
+            tube1.material = tubeMat;
+            tube1.physicsImpostor = new BABYLON.PhysicsImpostor(tube1, BABYLON.PhysicsImpostor.MeshImpostor, {mass: 0, friction: 0, restitution: 0.3});
+
+            const makeCurve = (range, nbSteps) => {
+                const path = [];
+                const stepSize = range / nbSteps;
+                for (let i = -range / 2; i < range / 2; i += stepSize ) {
+                    path.push( new BABYLON.Vector3(5 * Math.sin(i * nbSteps / 200), i, 5 * Math.cos(i *nbSteps / 200)) );
+                }
+                return path;
+            };
+
+            const curve = makeCurve(7, 100);
+            
+            var tube2 = BABYLON.MeshBuilder.CreateTube("tube2", {path: curve, radius: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE}, scene);
+            tube2.rotation.y = -Math.PI/2;
+            tube2.position.x = -13.3;
+            tube2.position.y = -6.5;
+            tube2.position.z = -4.8;
+            tube2.material = tubeMat;
+            tube2.physicsImpostor = new BABYLON.PhysicsImpostor(tube2, BABYLON.PhysicsImpostor.MeshImpostor, {mass: 0, friction: 0, restitution: 0.3});
+
+            var cone = createCone();
+            cone.position = new BABYLON.Vector3(-2, -28, -7.7);
+
+            var pendulum = createPendulum();
+            pendulum.sound = new BABYLON.Sound("shot", "./sounds/billiard.mp3", scene);
+            pendulum.position = new BABYLON.Vector3(-14.5, -18, -9.8);
+
+            var block = BABYLON.MeshBuilder.CreateBox("block", {width:20, depth:8, height:0.1}, scene);
+            block.position = new BABYLON.Vector3(-7,-20,-9);
+            block.visibility = 0;
+            block.physicsImpostor = new BABYLON.PhysicsImpostor(block, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            
+            var wallMat = new BABYLON.StandardMaterial("boxMat");
+            wallMat.diffuseTexture = new BABYLON.Texture("./textures/grass wall.jpg");
+            var wall1 = BABYLON.MeshBuilder.CreateBox("wall1", {height: 5, width: 1, depth: 2}, scene);
+            wall1.position = new BABYLON.Vector3(-9, -10, -9.8);
+            wall1.material = wallMat;
+            wall1.physicsImpostor = new BABYLON.PhysicsImpostor(wall1, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+
+            var smallCan1 = createSmallCan();
+            smallCan1.rotation.y = Math.PI/2;
+            smallCan1.position.x = -21;
+            smallCan1.position.y = -14;
+            smallCan1.position.z = -6.15;
+
+            const curve2 = makeCurve(6.9, 500);
+            
+            var tube3 = BABYLON.MeshBuilder.CreateTube("tube3", {path: curve2, radius: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE}, scene);
+            tube3.rotation.y = -Math.PI/3.8;
+            tube3.position.x = -26;
+            tube3.position.y = -17;
+            tube3.position.z = -3.8;
+            tube3.material = tubeMat;
+            tube3.physicsImpostor = new BABYLON.PhysicsImpostor(tube3, BABYLON.PhysicsImpostor.MeshImpostor, {mass: 0, friction: 0, restitution: 0.3});
+            
+            var can5 = createCan();
+            can5.position.x = -20.7;
+            can5.position.y = -21.7;
+            can5.position.z = -9.05;
+
+            var can6 = createCan();
+            can6.rotation.z = -Math.PI/12;
+            can6.position.x = -11;
+            can6.position.y = -25;
+            can6.position.z = -9.05;
+
+            var funnel = createFunnel();
+            funnel.rotation.x = Math.PI/8;
+            funnel.position.x = 0;
+            funnel.position.y = -33.5;
+            funnel.position.z = -5;
+            
+            var smallCan2 = createSmallCan();
+            smallCan2.rotation.y = Math.PI/2;
+            smallCan2.position.x = 0;
+            smallCan2.position.y = -35.6;
+            smallCan2.position.z = 2.1;
+
+            var wall2 = BABYLON.MeshBuilder.CreateBox("wall2", {height: 2, width: 3, depth: 0.5}, scene);
+            wall2.position = new BABYLON.Vector3(0, -35, 7);
+            wall2.rotation.z = -Math.PI/8;
+            wall2.material = wallMat;
+            wall2.physicsImpostor = new BABYLON.PhysicsImpostor(wall2, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+
+            var can7 = createCan();
+            can7.rotation.z = -Math.PI/12;
+            can7.position.x = 4;
+            can7.position.y = -38;
+            can7.position.z = 6;
+
+            var base = createBase();
+            base.position.x = 12;
+            base.position.y = -42;
+            base.position.z = 5.8;
+            base.particle = createParticles();
+            base.particle.emitter = new BABYLON.Vector3(12, -42, 5.8);
+            var baseTrigger = BABYLON.MeshBuilder.CreateBox("block", {width:10, depth:10, height:0.5}, scene);
+            baseTrigger.sound = new BABYLON.Sound("victory", "./sounds/victory.mp3", scene);
+            baseTrigger.position.x = 12;
+            baseTrigger.position.y = -41;
+            baseTrigger.position.z = 5.8;
+            baseTrigger.visibility = 0;
+
+            var victory = false;
+            
+            killBox.actionManager = new BABYLON.ActionManager(scene);
+            sphere1.actionManager = new BABYLON.ActionManager(scene);
+            sphere2.actionManager = new BABYLON.ActionManager(scene);
+            sphere3.actionManager = new BABYLON.ActionManager(scene);
+            pendulum.actionManager = new BABYLON.ActionManager(scene);
+            base.actionManager = new BABYLON.ActionManager(scene);
+            baseTrigger.actionManager = new BABYLON.ActionManager(scene);
+            can7.actionManager = new BABYLON.ActionManager(scene);
+
+            killBox.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    {
+                        trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
+                        parameter: sphere1, sphere2, sphere3, pendulum
+                    },
+                    function () { 
+                        killBox.sound.play();
+                    }
+                )
+            );
+            
+            sphere1.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    {
+                        trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
+                        parameter: can2
+                    },
+                    function () { 
+                        var frameRate = 10;
+                        var yRot = new BABYLON.Animation("yRot", "rotation.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+                        var keyFramesR = []; 
+                        keyFramesR.push({
+                            frame: 0,
+                            value: 0
+                        });
+                        keyFramesR.push({
+                            frame: frameRate,
+                            value: Math.PI
+                        });
+                        keyFramesR.push({
+                            frame: 2 * frameRate,
+                            value: 0
+                        });
+
+                        yRot.setKeys(keyFramesR);
+                        scene.beginDirectAnimation(can1, [yRot], 0, 2 * frameRate, true);
+                    }
+                )
+            );
+            
+            sphere1.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    {
+                        trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
+                        parameter: can3
+                    },
+                    function () { 
+                        var frameRate = 10;
+                        var xRot = new BABYLON.Animation("xRot", "rotation.x", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+                        var keyFramesR = []; 
+                        keyFramesR.push({
+                            frame: 0,
+                            value: 0
+                        });
+                        keyFramesR.push({
+                            frame: frameRate,
+                            value: Math.PI
+                        });
+                        keyFramesR.push({
+                            frame: 2 * frameRate,
+                            value: 0
+                        });
+
+                        xRot.setKeys(keyFramesR);
+                        scene.beginDirectAnimation(can2, [xRot], 0, 2 * frameRate, true);
+                    }
+                )
+            );
+            
+            sphere1.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    {
+                        trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
+                        parameter: tube2
+                    },
+                    function () {
+                        var frameRate = 10;
+                        var zRot = new BABYLON.Animation("zRot", "rotation.z", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+                        var keyFramesR = []; 
+                        keyFramesR.push({
+                            frame: 0,
+                            value: 0
+                        });
+                        keyFramesR.push({
+                            frame: frameRate,
+                            value: Math.PI
+                        });
+                        keyFramesR.push({
+                            frame: 2 * frameRate,
+                            value: 0
+                        });
+
+                        zRot.setKeys(keyFramesR);
+                        scene.beginDirectAnimation(can3, [zRot], 0, 2 * frameRate, true);
+                    }
+                )
+            );
+
+            sphere2.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    {
+                        trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
+                        parameter: sphere3
+                    },
+                    function () { 
+                        sphere2.sound.play();
+                    }
+                )
+            );
+
+            sphere3.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    {
+                        trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
+                        parameter: baseTrigger
+                    },
+                    function () { 
+                        baseTrigger.sound.play();
+                        base.particle.start();
+                    }
+                )
+            );
+
+            return scene;
+        };
+
+
+        function fadeAndDestroyMarble(marble) {
+            var forceDirection = new BABYLON.Vector3(0, 1, 0);
+            var forceMagnitude = 25;
+            var contactLocalRefPoint = BABYLON.Vector3.Zero();
+
+            //the one line of code version
+            BABYLON.Animation.CreateAndStartAnimation('marbleVisAnim', marble, 'visibility', 30, 30, 1, 0, 0, null, () => {
+                marble.dispose();
+            });
+        }
+
+        function createCan(){
+            var newMesh = new BABYLON.Mesh("can", scene);
+            
+            var mat1 = new BABYLON.StandardMaterial("mat1", scene);
+            mat1.diffuseColor.copyFromFloats(0.2, 0.8, 0.2);
+            mat1.backFaceCulling = false;
+            
+            var mat2 = new BABYLON.StandardMaterial("mat2", scene);
+            mat2.diffuseColor.copyFromFloats(0.6, 0.2, 0.7);
+            mat2.backFaceCulling = false;
+
+            var box1 = BABYLON.MeshBuilder.CreateBox("box1", {height: 0.5, width: 10, depth: 1.25}, scene);
+            box1.physicsImpostor = new BABYLON.PhysicsImpostor(box1, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            box1.material = mat1;
+            newMesh.addChild(box1);
+
+            var box2 = BABYLON.MeshBuilder.CreateBox("box2", {height: 1.25, width: 10, depth: 0.4}, scene);
+            box2.physicsImpostor = new BABYLON.PhysicsImpostor(box2, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            box2.position.z = 0.75;
+            box2.position.y = 0.5;
+            box2.material = mat2;
+            newMesh.addChild(box2);
+            
+            var box3 = BABYLON.MeshBuilder.CreateBox("box3", {height: 1.25, width: 10, depth: 0.4}, scene);
+            box3.physicsImpostor = new BABYLON.PhysicsImpostor(box3, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            box3.position.z = -0.75;
+            box3.position.y = 0.5;
+            box3.material = mat2;
+            newMesh.addChild(box3);
+
+            return newMesh;
+        }
+
+        function createSmallCan(){
+            var newMesh = new BABYLON.Mesh("newMesh", scene);
+
+            var mat1 = new BABYLON.StandardMaterial("mat1", scene);
+            mat1.diffuseColor.copyFromFloats(0.2, 0.7, 0.2);
+            mat1.backFaceCulling = false;
+            
+            var mat2 = new BABYLON.StandardMaterial("mat2", scene);
+            mat2.diffuseColor.copyFromFloats(0.6, 0.2, 0.7);
+            mat2.backFaceCulling = false;
+
+            var box1 = BABYLON.MeshBuilder.CreateBox("box1", {height: 0.5, width: 5, depth: 1.25}, scene);
+            box1.material = mat2;
+            box1.physicsImpostor = new BABYLON.PhysicsImpostor(box1, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            newMesh.addChild(box1);
+
+            var box2 = BABYLON.MeshBuilder.CreateBox("box2", {height: 1.25, width: 5, depth: 0.5}, scene);
+            box2.position.z = 0.75;
+            box2.position.y = 0.5;
+            box2.material = mat1;
+            box2.physicsImpostor = new BABYLON.PhysicsImpostor(box2, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            newMesh.addChild(box2);
+            
+            var box3 = BABYLON.MeshBuilder.CreateBox("box3", {height: 1.25, width: 5, depth: 0.5}, scene);
+            box3.position.z = -0.75;
+            box3.position.y = 0.5;
+            box3.material = mat1;
+            box3.physicsImpostor = new BABYLON.PhysicsImpostor(box3, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            newMesh.addChild(box3);
+
+            return newMesh;
+        }
+
+        function createCone(){
+            var a = BABYLON.Mesh.CreateSphere("sphere", 16, 5, scene);
+            var b = BABYLON.MeshBuilder.CreateBox("box", {height: 2.25, width: 5, depth: 5}, scene);
+
+            a.position.y += 10003.8;
+            b.position.y += 10002.5;
+
+            var aCSG = BABYLON.CSG.FromMesh(a);
+            var bCSG = BABYLON.CSG.FromMesh(b);
+
+            var mat0 = new BABYLON.StandardMaterial("mat0", scene);
+
+            mat0.diffuseColor.copyFromFloats(0.8, 0.2, 0.2);
+            mat0.backFaceCulling = false;
+
+            var subCSG = bCSG.subtract(aCSG);
+            var newMesh = subCSG.toMesh("csg", mat0, scene);
+            newMesh.physicsImpostor = new BABYLON.PhysicsImpostor(newMesh, BABYLON.PhysicsImpostor.MeshImpostor, {mass: 0, friction: 0, restitution: 0.3});
+
+            return newMesh;
+        }
+
+        function createPendulum(){
+            var newMesh = new BABYLON.Mesh("pendulum", scene);
+            
+            var tabMat = new BABYLON.StandardMaterial("tabMat");
+            tabMat.diffuseTexture = new BABYLON.Texture("./textures/taboa.jpg");
+            var metMat = new BABYLON.StandardMaterial("metMat");
+            metMat.diffuseTexture = new BABYLON.Texture("./textures/metal.jpg");
+
+            var flat = BABYLON.MeshBuilder.CreateBox("flat", {height: 0.5, width: 15, depth: 2}, scene);
+            flat.position.y = 3.3;
+            flat.material = tabMat;
+            flat.physicsImpostor = new BABYLON.PhysicsImpostor(flat, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 3, restitution: 0.1 }, scene);
+            
+            var cylinder = BABYLON.MeshBuilder.CreateCylinder("cylinder", {height: 3, diameter: 2, tessellation: 6}, scene);
+            cylinder.rotation.x = Math.PI/2;
+            cylinder.material = metMat;
+            cylinder.physicsImpostor = new BABYLON.PhysicsImpostor(cylinder, BABYLON.PhysicsImpostor.BoxImpostor, {mass: 0, friction: 0, restitution: 0.3});
+
+            newMesh.addChild(flat);
+            newMesh.addChild(cylinder);
+
+            return newMesh;
+        }
+        
+        function createFunnel() {
+            var newMesh = new BABYLON.Mesh("funnel", scene);
+            
+            var funMat = new BABYLON.StandardMaterial("funMat");
+            funMat.diffuseTexture = new BABYLON.Texture("./textures/funnel.jpg");
+
+            var ground = BABYLON.MeshBuilder.CreateBox("ground", {width:8, depth:9.6, height:0.2}, scene);
+            ground.material = funMat;
+            ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+
+            var wall1 = BABYLON.MeshBuilder.CreateBox("wall1", {width:0.1, depth:5, height:1}, scene);
+            wall1.rotation.y = -Math.PI/4;
+            wall1.position.x = 2.24;
+            wall1.position.y = 0.5;
+            wall1.position.z = 3;
+            wall1.physicsImpostor = new BABYLON.PhysicsImpostor(wall1, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            
+            var wall2 = BABYLON.MeshBuilder.CreateBox("wall2", {width:0.1, depth:5, height:1}, scene);
+            wall2.rotation.y = Math.PI/4;
+            wall2.position.x = -2.24;
+            wall2.position.y = 0.5;
+            wall2.position.z = 3;
+            wall2.physicsImpostor = new BABYLON.PhysicsImpostor(wall2, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+
+            newMesh.addChild(ground);
+            newMesh.addChild(wall1);
+            newMesh.addChild(wall2);
+
+            return newMesh;
+        }
+
+        function createBase() {
+            var newMesh = new BABYLON.Mesh("base", scene);
+            
+            var grouMat = new BABYLON.StandardMaterial("grouMat");
+            grouMat.diffuseTexture = new BABYLON.Texture("./textures/sand.jpg");
+            
+            var mat = new BABYLON.StandardMaterial("mat", scene);
+            mat.diffuseColor.copyFromFloats(0.3, 0.2, 0.2);
+            mat.backFaceCulling = false;
+
+            var ground = BABYLON.MeshBuilder.CreateBox("ground", {height: 0.2, width: 10, depth: 10}, scene);
+            ground.material = grouMat;
+            ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            newMesh.addChild(ground);
+
+            var wall1 = BABYLON.MeshBuilder.CreateBox("wall1", {height: 1.25, width: 10, depth: 0.4}, scene);
+            wall1.physicsImpostor = new BABYLON.PhysicsImpostor(wall1, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            wall1.position.z = 5;
+            wall1.position.y = 0.6;
+            wall1.material = mat;
+            newMesh.addChild(wall1);
+            
+            var wall2 = BABYLON.MeshBuilder.CreateBox("wall2", {height: 1.25, width: 10, depth: 0.4}, scene);
+            wall2.physicsImpostor = new BABYLON.PhysicsImpostor(wall2, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            wall2.position.z = -5;
+            wall2.position.y = 0.6;
+            wall2.material = mat;
+            newMesh.addChild(wall2);
+            
+            var wall3 = BABYLON.MeshBuilder.CreateBox("wall3", {height: 1.25, width: 0.4, depth: 10}, scene);
+            wall3.physicsImpostor = new BABYLON.PhysicsImpostor(wall3, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            wall3.position.x = 5;
+            wall3.position.y = 0.6;
+            wall3.material = mat;
+            newMesh.addChild(wall3);
+            
+            var wall4 = BABYLON.MeshBuilder.CreateBox("wall4", {height: 1.25, width: 0.4, depth: 10}, scene);
+            wall4.physicsImpostor = new BABYLON.PhysicsImpostor(wall4, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+            wall4.position.x = -5;
+            wall4.position.y = 0.6;
+            wall4.material = mat;
+            newMesh.addChild(wall4);
+
+            return newMesh;
+        }
+        
+        function createParticles() {
+            var particleSystem = new BABYLON.ParticleSystem("particles", 5000, scene);
+
+            //Texture of each particle
+            particleSystem.particleTexture = new BABYLON.Texture("textures/flare.png", scene);
+
+            // Where the particles come from// the starting object, the emitter
+            particleSystem.minEmitBox = new BABYLON.Vector3(-4, 0, -4); // Starting all from
+            particleSystem.maxEmitBox = new BABYLON.Vector3(4, 0, 4); // To...
+
+            // Colors of all particles
+            particleSystem.color1 = new BABYLON.Color4(0.7, 0.52, 0.1, 1);
+            particleSystem.color2 = new BABYLON.Color4(0.8, 0.2, 0.7, 1);
+            particleSystem.colorDead = new BABYLON.Color4(0.3, 0.8, 0.6, 1);
+
+            // Size of each particle (random between...
+            particleSystem.minSize = 0.3;
+            particleSystem.maxSize = 0.8;
+
+            // Life time of each particle (random between...
+            particleSystem.minLifeTime = 2;
+            particleSystem.maxLifeTime = 3.5;
+
+            // Emission rate
+            particleSystem.emitRate = 1000;
+
+            // Blend mode : BLENDMODE_ONEONE, or BLENDMODE_STANDARD
+            particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+
+            // Set the gravity of all particles
+            particleSystem.gravity = new BABYLON.Vector3(0, -0.2, 0);
+
+            // Direction of each particle after it has been emitted
+            particleSystem.direction1 = new BABYLON.Vector3(-0.3, 1, 0.8);
+            particleSystem.direction2 = new BABYLON.Vector3(0.3, 1, -0.8);
+
+            // Angular speed, in radians
+            particleSystem.minAngularSpeed = 0;
+            particleSystem.maxAngularSpeed = Math.PI;
+
+            // Speed
+            particleSystem.minEmitPower = 0.5;
+            particleSystem.maxEmitPower = 1;
+            particleSystem.updateSpeed = 0.055;
+
+            particleSystem.targetStopDuration = 100;
+
+            return particleSystem;
+        }
+
+        function animation(box){
+            const frameRate = 10;
+
+            const xSlide = new BABYLON.Animation("xSlide", "rotaion.x", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+            const keyFrames = []; 
+            keyFrames.push({
+                frame: 0,
+                value: 2
+            });
+            keyFrames.push({
+                frame: frameRate,
+                value: -2
+            });
+            keyFrames.push({
+                frame: 2 * frameRate,
+                value: 2
+            });
+
+            xSlide.setKeys(keyFrames);
+            box.animations.push(xSlide);
+            scene.beginAnimation(box, 0, 2 * frameRate, true);
+        }
+
+        window.initFunction = async function () {
+            var asyncEngineCreation = async function () {
+                try {
+                    await Ammo().then(console.log)
+
+                    return createDefaultEngine()
+                } catch (e) {
+                    console.log('the available createEngine function failed. Creating the default engine instead')
+                    return createDefaultEngine()
+                }
+            }
+
+            window.engine = await asyncEngineCreation()
+
+            if (!engine) throw 'engine should not be null.'
+
+            window.scene = createScene()
+        }
+
+        initFunction().then(() => {
+            sceneToRender = scene
+            engine.runRenderLoop(function () {
+            if (sceneToRender && sceneToRender.activeCamera) {
+                sceneToRender.render()
+            }
+            })
+        })
+
+        // Resize
+        window.addEventListener('resize', function () {
+            engine.resize()
+        })
+
+
+    </script>
+</body>
+
+</html>
